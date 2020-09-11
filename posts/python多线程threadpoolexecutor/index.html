@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>
+python多线程ThreadPoolExecutor
+ | 刘卫正的博客</title>
+
+    
+  <link href="/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+
+
+
+  
+  <meta name="author" content="刘卫正" />
+  <meta name="description" content="python多线程之ThreadPoolExecutor包解析
+" />
+
+
+
+<meta name="generator" content="Hugo 0.73.0" />
+
+<link rel="canonical" href="https://starrye.github.io/posts/python%E5%A4%9A%E7%BA%BF%E7%A8%8Bthreadpoolexecutor/" />
+
+
+<meta property="og:title" content="python多线程ThreadPoolExecutor" />
+<meta property="og:description" content="python多线程之ThreadPoolExecutor包解析" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://starrye.github.io/posts/python%E5%A4%9A%E7%BA%BF%E7%A8%8Bthreadpoolexecutor/" />
+<meta property="article:published_time" content="2020-09-10T15:21:09+08:00" />
+<meta property="article:modified_time" content="2020-09-10T15:21:09+08:00" />
+
+
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="python多线程ThreadPoolExecutor"/>
+<meta name="twitter:description" content="python多线程之ThreadPoolExecutor包解析"/>
+
+
+<link rel="stylesheet" href="/css/github-markdown.css" />
+<link rel="stylesheet" href="/css/semantic.min.css" />
+<link rel="stylesheet" href="/css/site.css" />
+
+
+<style>
+  a {
+    color: seagreen !important;
+  }
+</style>
+
+
+
+<style>
+  .inverted a {
+     color: darkseagreen !important;
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/gh/yremp/yremp-js@1.5/sakura.js"></script>
+
+
+<link rel="stylesheet" href="/styles/default.css" />
+<script src="/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+  </head>
+
+  
+  <body style="background-image: url(/me/background.jpg);">
+  
+    <div class="flip-container">
+      <div class="flipper">
+        <section class="front">
+          
+<nav class="ui secondary inverted menu dream-menu">
+
+  <div class="item">
+    <i class="large link bullseye icon dream-flip-toggle" title="翻转！"></i>
+  </div>
+  <div class="item">
+    <i class="large link home icon" title="首页" onclick="window.location.href = 'https:\/\/starrye.github.io'"></i>
+  </div>
+  <div class="item">
+    <i class="large link icon theme-switch" onclick="themeSwitch()"></i>
+  </div>
+</nav>
+
+          
+<div class="ui centered relaxed grid dream-grid">
+  <div class="sixteen wide mobile sixteen wide tablet twelve wide computer column markdown-body dream-single">
+
+    <section class="ui top attached segment" id="dream-save-post-as-img">
+      <header style="margin-top: 0 !important;">
+        <h2 class="ui header">
+          python多线程ThreadPoolExecutor
+          <div class="sub header">@ 刘卫正 · Thursday, Sep 10, 2020 · 2 分钟阅读 · 更新于 Sep 10, 2020</div>
+        </h2>
+      </header>
+      <article style="margin-top: 2rem;"><p>python多线程之ThreadPoolExecutor包解析</p>
+<p><font size=4>线程池定义</font></p>
+<ul>
+<li>一种线程使用模式。线程过多会带来调度开销，进而影响缓存局部性和整体性能。而线程池维护着多个线程，等待着监督管理者分配可并发执行的任务。这避免了在处理短时间任务时创建与销毁线程的代价。线程池不仅能够保证内核的充分利用，还能防止过分调度。</li>
+</ul>
+<p><font size=4>ThreadPoolExecutor介绍</font></p>
+<ul>
+<li>包名:futures</li>
+<li>在concurrent.future(py2,py3均有)模块中有ThreadPoolExecutor和ProcessPoolExecutor两个类，这两个类实现线程/进程池，只需短短几行就可以实现我们的目的。</li>
+<li>线程池的基类是 concurrent.futures 模块中的 Executor，Executor 提供了两个子类，即 ThreadPoolExecutor 和 ProcessPoolExecutor，其中 ThreadPoolExecutor 用于创建线程池，而 ProcessPoolExecutor 用于创建进程池。</li>
+</ul>
+<p><font size=4>ThreadPoolExecutor源码分析</font>
+<figure>
+    <img src="/img/ThreadPoolExecutor.png" width="90%"/> 
+</figure>
+</p>
+<p><font size=4>代码演示 </font></p>
+<hr>
+<pre><code>import time
+from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED, as_completed, FIRST_COMPLETED
+
+# 测试函数
+def test(a):
+    time.sleep(a)
+    # print &quot;test{}&quot;.format(a)
+    return &quot;result{}&quot;.format(a)
+
+
+# 创建线程池-最多可同时执行两个线程
+pool = ThreadPoolExecutor(max_workers=2)
+
+test_list = []
+# 利用submit提交任务，第一个参数为测试函数 第二个参数为函数所需要的参数,根据源码可知 此处的test_x是Future对象的实例
+# 所以他们可以调用future的方法
+test_1 = pool.submit(test, 1)
+test_list.append(test_1)
+test_2 = pool.submit(test, 2)
+test_list.append(test_2)
+test_3 = pool.submit(test, 3)
+test_list.append(test_3)
+test_4 = pool.submit(test, 4)
+test_list.append(test_4)
+
+
+print '----------wait-------------'
+# wait
+# 让主线程阻塞，直到满足设定的要求
+# ALL_COMPLETED(默认)：表明要等待所有的任务都结束。
+# FIRST_COMPLETED：当抛出第一个异常时等待结束，如果没有异常，等默认等待所有任务结束
+# FIRST_EXCEPTION：当任意一个任务完成或者被取消，则等待结束
+a = wait(test_list, return_when=FIRST_COMPLETED)
+print type(a)
+for i in a:
+    print i.__str__()
+
+print '---------running-----------'
+# running用来判断任务是否正在运行(True/False)
+print &quot;test_1 running:{}&quot;.format(test_1.running())  # 返回True
+print &quot;test_3 running:{}&quot;.format(test_3.running())  # 返回False 因为线程池大小为2，test_3还在排队等候
+
+print '---------done--------------'
+# done用来判断任务是否结束(True/False)，隶属类Future的方法
+time.sleep(1)
+print &quot;test_1 done:{}&quot;.format(test_1.done())  # 输出结果为True
+print &quot;test_2 done:{}&quot;.format(test_2.done())  # 输出结果为False
+
+print '--------cancel-------------'
+# cancel用来取消线程任务。如果任务正在执行，不可取消，则该方法返回 False；否则，程序会取消该任务，并返回 True。
+print &quot;test_3 cancel:{}&quot;.format(test_3.cancel())  # 返回False 因为线程池大小为2 任务test_3已经投入线程池运行了
+print &quot;test_4 cancel:{}&quot;.format(test_4.cancel())  # 返回True 因为此时test4还在排队等候进入线程池
+
+print '-------cancelled-----------'
+# cancelled用来判断代表的线程任务是否被成功取消(True/False)
+print &quot;test_3 cancelled:{}&quot;.format(test_3.cancelled())  # 返回False
+print &quot;test_4 cancelled:{}&quot;.format(test_4.cancelled())  # 返回True
+
+print '--------result-------------'
+# result用来获取线程执行结果，隶属类Future的方法
+print &quot;test_1 result:{}&quot;.format(test_1.result())  # 此方法当未设置timeout时会阻塞等待任务完成返回结果
+# print &quot;test_2 result:{}&quot;.format(test_2.result(timeout=0.5))  # 结果会报错，因为设置了超时时间为0.5s 而此时test_2还需要1s才能完成任务
+
+print '-----add_done_callback-----'
+# add_done_callback回调函数，当线程任务完成后，程序会自动触发该回调函数，并将对应的 Future 对象作为参数传给该回调函数
+# 隶属于Future的方法，为了获取线程执行结果，与result类似但不阻塞等待
+# !:调用add_done_callback没有返回值，仅仅是执行回调函数，须注意。
+
+
+def callback(future):
+    print &quot;callback test{}&quot;.format(future.result())
+
+
+test_2.add_done_callback(callback)
+time.sleep(1)
+
+print '-------as_completed--------'
+# as_completed 用于获取任务列表里的任务执行结果
+# 隶属于future的方法
+# as_completed() 方法是一个生成器，
+# 在没有任务完成的时候，会阻塞，有任务完成就会弹出任务执行结果，然后继续循环，如果下一个任务还没执行完成仍然继续阻塞住，循环到所有的任务结束
+for task in as_completed(test_list):
+    # 没有取消的任务才能获取执行结果，不然会报错CancelledError
+    if not task.cancelled():
+        print &quot;get {} success!&quot;.format(task.result())
+
+
+print '-------shutdown------------'
+# shutdown用来关闭线程池，隶属类ThreadPoolExecutor的方法
+pool.shutdown()
+</code></pre></article>
+    </section>
+
+    <footer class="ui attached segment dream-tags">
+      
+        
+          <a class="ui label" href="/tags/%E5%A4%9A%E7%BA%BF%E7%A8%8B" title="多线程">多线程</a>
+        
+      
+      <div
+        class="ui label"
+        style="float: right; cursor: pointer;"
+        onclick="savePostAsImg()">
+        <i class="save icon"></i>保存为图片
+      </div>
+    </footer>
+
+    
+
+    
+
+  </div>
+  <div class="sixteen wide mobile sixteen wide tablet four wide computer column">
+    <article class="dream-header">
+  <section class="ui top attached center aligned segment">
+    <div class="ui small circular image">
+      
+        <img src="/me/yy.jpg">
+      
+    </div>
+
+    <h1 class="ui medium header">刘卫正 的博客<div class="sub header" style="margin-top: 0.5rem;">无论未来会遇到谁,生活都是先从遇到自己开始的</div>
+    </h1>
+
+    <div class="ui horizontal list">
+      
+      <a class="item" href="/posts">
+        <i class="archive icon" title="归档"></i>
+      </a>
+      
+      <a class="item" href="/tags">
+        <i class="tags icon" title="所有标签"></i>
+      </a>
+      <a class="item" href="/categories">
+        <i class="th list icon" title="所有分类"></i>
+      </a>
+    </div>
+  </section>
+
+  
+  <section class="ui attached center aligned segment dream-tags">
+    
+      <a class="ui label" href="/tags/leetcode" title="leetcode">leetcode</a>
+    
+      <a class="ui label" href="/tags/stack" title="stack">stack</a>
+    
+      <a class="ui label" href="/tags/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92" title="动态规划">动态规划</a>
+    
+      <a class="ui label" href="/tags/%E5%A4%9A%E7%BA%BF%E7%A8%8B" title="多线程">多线程</a>
+    
+  </section>
+  
+
+  
+  <section class="ui attached segment dream-categories">
+    <div class="ui accordion">
+      
+        <div class="title">
+          <i class="dropdown icon"></i>
+          <a href="/categories/leetcode" class="item">leetcode</a>
+        </div>
+        <div class="content">
+          <div class="ui list">
+          
+            <div class="item">
+              <div class="content">
+                <a href="/posts/%E9%9D%A2%E8%AF%95%E9%A2%9817.16.%E6%8C%89%E6%91%A9%E5%B8%88/" class="item">面试题17.16.按摩师</a>
+              </div>
+            </div>
+          
+            <div class="item">
+              <div class="content">
+                <a href="/posts/1381.%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E6%94%AF%E6%8C%81%E5%A2%9E%E9%87%8F%E6%93%8D%E4%BD%9C%E7%9A%84%E6%A0%88/" class="item">1381. 设计一个支持增量操作的栈</a>
+              </div>
+            </div>
+          
+          </div>
+        </div>
+      
+        <div class="title">
+          <i class="dropdown icon"></i>
+          <a href="/categories/stack" class="item">stack</a>
+        </div>
+        <div class="content">
+          <div class="ui list">
+          
+            <div class="item">
+              <div class="content">
+                <a href="/posts/1381.%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E6%94%AF%E6%8C%81%E5%A2%9E%E9%87%8F%E6%93%8D%E4%BD%9C%E7%9A%84%E6%A0%88/" class="item">1381. 设计一个支持增量操作的栈</a>
+              </div>
+            </div>
+          
+          </div>
+        </div>
+      
+        <div class="title">
+          <i class="dropdown icon"></i>
+          <a href="/categories/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92" class="item">动态规划</a>
+        </div>
+        <div class="content">
+          <div class="ui list">
+          
+            <div class="item">
+              <div class="content">
+                <a href="/posts/%E9%9D%A2%E8%AF%95%E9%A2%9817.16.%E6%8C%89%E6%91%A9%E5%B8%88/" class="item">面试题17.16.按摩师</a>
+              </div>
+            </div>
+          
+          </div>
+        </div>
+      
+        <div class="title">
+          <i class="dropdown icon"></i>
+          <a href="/categories/%E5%A4%9A%E7%BA%BF%E7%A8%8B" class="item">多线程</a>
+        </div>
+        <div class="content">
+          <div class="ui list">
+          
+            <div class="item">
+              <div class="content">
+                <a href="/posts/python%E5%A4%9A%E7%BA%BF%E7%A8%8Bthreadpoolexecutor/" class="item">python多线程ThreadPoolExecutor</a>
+              </div>
+            </div>
+          
+          </div>
+        </div>
+      
+    </div>
+  </section>
+  
+
+  <section class="ui attached segment header-socials">
+    <nav class="ui secondary menu dream-menu dream-socials">
+  
+    <div class="item">
+      <a href="mailto:helloliuwz@gmail.com">
+        <i class=" mail icon" title="email"></i>
+      </a>
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class="item">
+      <a href="https://github.com/starrye" target="_blank">
+        <i class=" github icon" title="github"></i>
+      </a>
+    </div>
+  
+
+  
+
+  
+</nav>
+
+  </section>
+
+  <section class="ui bottom attached center aligned segment">
+    
+      <p>© 2020 刘卫正的博客</p>
+    
+
+    <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/g1eny0ung/hugo-theme-dream" target="_blank">Dream</a>.</p>
+  </section>
+</article>
+
+  </div>
+</div>
+
+        </section>
+        <section class="back">
+          
+<nav class="ui secondary inverted menu dream-menu">
+
+  <div class="item">
+    <i class="large link bullseye icon dream-flip-toggle" title="翻转！"></i>
+  </div>
+  <div class="item">
+    <i class="large link home icon" title="首页" onclick="window.location.href = 'https:\/\/starrye.github.io'"></i>
+  </div>
+  <div class="item">
+    <i class="large link icon theme-switch" onclick="themeSwitch()"></i>
+  </div>
+</nav>
+
+          <div class="ui centered relaxed grid dream-grid dream-back">
+  
+  
+  
+    <section class="sixteen wide mobile eight wide tablet four wide computer column dream-column">
+      <article>
+        <div class="ui top attached segment">
+          <h3 class="ui header">关于我</h3>
+        </div>
+        <div class="ui attached segment markdown-body">
+          <h2 id="heading">❤️</h2>
+<p>姓名: 刘卫正</p>
+<hr>
+<p>性别: 男</p>
+<hr>
+<p>年龄: 25</p>
+<hr>
+<p>星座: 摩羯座</p>
+<hr>
+<p>职业: python工程师</p>
+<hr>
+<p>爱好: 算法与运动</p>
+<hr>
+<p>主要的技术栈是：</p>
+<ul>
+<li>python</li>
+<li>c</li>
+<li>Django</li>
+<li>redis</li>
+</ul>
+<hr>
+<p>学习网站:
+<a href="https://leetcode-cn.com/u/hello_lwz/">leetcode</a></p>
+<hr>
+<p>公司:
+<a href="http://www.youtiankeji.com/index.html">厦门游天科技有限公司</a></p>
+<hr>
+<p>&ndash; 2020 年 06 月 29 日更新</p>
+
+        </div>
+      </article>
+    </section>
+  
+    <section class="sixteen wide mobile eight wide tablet four wide computer column dream-column">
+      <article>
+        <div class="ui top attached segment">
+          <h3 class="ui header">我的一些开源项目</h3>
+        </div>
+        <div class="ui attached segment markdown-body">
+          <p>等等?项目呢？不会没有吧？?</p>
+
+        </div>
+      </article>
+    </section>
+  
+    <section class="sixteen wide mobile eight wide tablet four wide computer column dream-column">
+      <article>
+        <div class="ui top attached segment">
+          <h3 class="ui header">其他</h3>
+        </div>
+        <div class="ui attached segment markdown-body">
+          <p>如果你喜欢我的开源项目或者它们可以给你带来帮助，可以赏一杯咖啡 ☕ 给我。~</p>
+<blockquote>
+<p>It is better to attach some information or leave a message so that I can <a href="/posts/buy-me-a-coffee">record the donation 📝</a>, thank you very much 🙏.</p>
+</blockquote>
+
+        </div>
+      </article>
+    </section>
+  
+
+  <section class="sixteen wide mobile eight wide tablet four wide computer column dream-column">
+    <article>
+      <div class="ui top attached segment">
+        <h3 class="ui header">社交链接</h3>
+      </div>
+      <div class="ui attached segment">
+        <nav class="ui secondary menu dream-menu dream-socials">
+  
+    <div class="item">
+      <a href="mailto:helloliuwz@gmail.com">
+        <i class="large mail icon" title="email"></i>
+      </a>
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class="item">
+      <a href="https://github.com/starrye" target="_blank">
+        <i class="large github icon" title="github"></i>
+      </a>
+    </div>
+  
+
+  
+
+  
+</nav>
+
+      </div>
+    </article>
+  </section>
+
+  <section class="sixteen wide mobile eight wide tablet four wide computer column dream-column">
+    
+  </section>
+
+  
+  
+</div>
+
+        </section>
+      </div>
+    </div>
+
+    <script src="/js/jquery.min.js"></script>
+<script src="/js/semantic.min.js"></script>
+<script src="/js/imagesloaded.pkgd.min.js"></script>
+<script src="/js/masonry.pkgd.min.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/header.js"></script>
+<script src="/js/main.js"></script>
+<script src="/js/theme.js"></script>
+
+    
+<script src="/js/html2canvas.min.js"></script>
+
+
+    
+  </body>
+</html>
